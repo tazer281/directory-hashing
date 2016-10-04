@@ -63,6 +63,7 @@ typedef struct __iobuf {
 #define __STDIO_VA_LIST__	void *
 
 typedef long int	fpos_t;
+typedef unsigned int uint32_t;
 
 #ifndef _SIZE_T
 #define	_SIZE_T
@@ -124,6 +125,7 @@ _PROTOTYPE( int ferror, (FILE *_stream)					);
 _PROTOTYPE( void perror, (const char *_s)				);
 _PROTOTYPE( int __fillbuf, (FILE *_stream)				);
 _PROTOTYPE( int __flushbuf, (int _c, FILE *_stream)			);
+_PROTOTYPE (uint32_t fnv, (char *c));
 
 #define	getchar()	getc(stdin)
 #define	putchar(c)	putc(c,stdout)

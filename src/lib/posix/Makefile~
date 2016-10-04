@@ -103,7 +103,7 @@ OBJECTS	= \
 	$(LIBRARY)(readlink.o) \
 	$(LIBRARY)(symlink.o) \
 	$(LIBRARY)(usleep.o) \
-	$(LIBRARY)(_fnv.o) \
+	$(LIBRARY)(_fnv.o)
 
 $(LIBRARY):	$(OBJECTS)
 	aal cr $@ *.o
@@ -376,9 +376,6 @@ $(LIBRARY)(_waitpid.o):	_waitpid.c
 $(LIBRARY)(_write.o):	_write.c
 	$(CC1) _write.c
 
-$(LIBRARY)(_fnv.o):	_fnv.c
-	$(CC1) _fnv.c
-
 $(LIBRARY)(gettimeofday.o):	gettimeofday.c
 	$(CC1) gettimeofday.c
 
@@ -399,3 +396,6 @@ $(LIBRARY)(symlink.o):	symlink.c
 
 $(LIBRARY)(usleep.o):	usleep.c
 	$(CC1) usleep.c
+
+$(LIBRARY)(fnv.o):	_fnv.c
+	$(CC1) _fnv.c
