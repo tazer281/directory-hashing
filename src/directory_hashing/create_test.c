@@ -89,10 +89,14 @@ int main(int argc, char *argv) {
         strcat(filename, "/");
         strcat(filename, c);
 
+        fp = fopen(filename, "ab+");
+
         writeAmount = randomInt(1000, 10000);
         for (k = 0; k < writeAmount; k = k + 1) {
             fprintf(fp, "%c", randomChar());
         }
+
+        fclose(fp);
 
         memset(c, 0, len);
         memset(tmp, 0, len);
