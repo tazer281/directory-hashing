@@ -13,6 +13,8 @@
 #include <ansi.h>
 #endif
 
+#include <stdint.h>
+
 /*
  * Focus point of all stdio activity.
  */
@@ -63,7 +65,6 @@ typedef struct __iobuf {
 #define __STDIO_VA_LIST__	void *
 
 typedef long int	fpos_t;
-typedef unsigned int uint32_t;
 
 #ifndef _SIZE_T
 #define	_SIZE_T
