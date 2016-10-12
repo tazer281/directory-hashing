@@ -56,6 +56,7 @@
 #define LPAR            25	/* left parenthesis                      */
 #define RPAR            26	/* right parenthesis                     */
 #define NOT             27	/* logical not                           */
+#define HASH            28	/* use hash	                             */
 
 /* Some return values: */
 #define EOI             -1	/* end of expression                     */
@@ -166,6 +167,9 @@ struct oper {
 	"nogroup", OP_NOGROUP
   },
   {
+	"hash", HASH
+  },
+  {
 	0, 0
   }
 };
@@ -182,6 +186,9 @@ int depth_flag = 0;		/* descend before check?                         */
 int prune_here;			/* This is Baaaad! Don't ever do this again!     */
 int um;				/* current umask()                               */
 int needprint = 1;		/* implicit -print needed?                       */
+int useHash = 0;			/*use hash function								*/
+uint32_t hashValue = 0, hashCopy = 0;
+char *dirPath, *filename;
 
 
 /* The prototypes: */
@@ -207,6 +214,8 @@ _PROTOTYPE(int smatch, (char *s, char *t));
 _PROTOTYPE(char *find_bin, (char *s));
 _PROTOTYPE(int execute, (int op, struct exec * e, char *path));
 _PROTOTYPE(void domode, (int op, int *mode, int bits));
+_PROTOTYPE(int strtoi, (char *c));
+_PROTOTYPE(int hashCheck, (char *dir, char *s));
 
 
 /* Malloc: a certified malloc */
@@ -235,6 +244,8 @@ char *argv[];
   char **pathlist, *path, *last;
   int pathcnt = 0, i;
   struct node *pred;
+
+  dirPath = malloc(8 * sizeof(char));
 
   prog = *argv++;		/* set program name (for diagnostics)    */
   if ((epath = getenv("PATH")) == (char *) NULL)
@@ -273,9 +284,12 @@ struct node *pred;
 {
   char spath[PATH_MAX];
   register char *send = spath, *p;
-  struct stat st;
+  struct stat st, sb;
   DIR *dp;
   struct dirent *de;
+  char *lastDir, *dirValue;
+  int dirInt;
+
 
   if (path[1] == '\0' && *path == '/') {
 	*send++ = '/';
@@ -315,7 +329,22 @@ struct node *pred;
 					  && ((de->d_name[1] != '.')
 					      || (de->d_name[2])))) {
 				strcpy(send, de->d_name);
-				find(spath, pred, send);
+
+                if(useHash == 1) {
+                        lastDir = strrchr(spath, '/');
+                        dirValue = malloc(strlen(lastDir) -1);
+                        strncpy(dirValue, lastDir + 1, strlen(lastDir));
+                        dirInt = strtoi(dirValue);
+                        stat(spath, &sb);
+                        if(dirInt > 0 && S_ISDIR(sb.st_mode)) {
+                                return;
+                        } else {
+                                find(spath, pred, send);
+                        }
+
+                         free(dirValue);
+                } else
+				        find(spath, pred, send);
 			}
 		}
 		closedir(dp);
@@ -333,6 +362,8 @@ char *path, *last;
 register struct stat *st;
 register struct node *n;
 {
+struct stat sb;
+
   if (n == (struct node *) NULL) return 1;
   switch (n->n_type) {
     case OP_AND:
@@ -344,7 +375,13 @@ register struct node *n;
     case NOT:
 	return !check(path, st, n->n_info.n_opnd.n_left, last);
     case OP_NAME:
-	return smatch(last, n->n_info.n_str);
+    stat(path, &sb);
+    if (useHash == 0)
+	    return smatch(last, n->n_info.n_str);
+    else if (S_ISDIR(sb.st_mode)) {
+        hashCheck(path, n->n_info.n_str);
+        return 0;
+    }
     case OP_PERM:
 	if (n->n_info.n_int.n_sign < 0)
 		return(st->st_mode & (int) n->n_info.n_int.n_val) ==
@@ -392,6 +429,8 @@ register struct node *n;
 	return(getpwuid(st->st_uid) == (struct passwd *) NULL);
     case OP_NOGROUP:
 	return(getgrgid(st->st_gid) == (struct group *) NULL);
+	case HASH:
+	return HASH;
   }
   fatal("ILLEGAL NODE", "");
   return 0;			/* Never reached */
@@ -650,6 +689,8 @@ int t;
   struct group *gr;
   long l;
   int i;
+  int dir1, dir2;
+  char buffer[7];
 
   switch (t) {
     case OP_TYPE:
@@ -770,6 +811,7 @@ int t;
     case OP_NAME:
 	checkarg(*++ipp);
 	p->n_info.n_str = *ipp;
+    hashValue = fnv(p->n_info.n_str);
 	break;
     case OP_XDEV:	xdev_flag = 1;	break;
     case OP_DEPTH:	depth_flag = 1;	break;
@@ -777,8 +819,19 @@ int t;
     case OP_PRINT:
     case OP_PRINT0:
     case OP_NOUSER:	case OP_NOGROUP:	break;
-          default:
-	fatal("syntax error, operator expected", "");
+	case HASH:
+		useHash = 1;
+        hashCopy = hashValue;
+        dir1 = hashValue & 255;
+        hashValue = hashValue >> 8;
+        dir2 = hashValue & 255;
+
+		sprintf(buffer, "%d/%d", dir1, dir2);
+        strcpy(dirPath, buffer);
+		strcat(dirPath, "/");
+		break;
+	default:
+		fatal("syntax error, operator expected", "");
   }
   if ((t == OP_PRINT) || (t == OP_PRINT0) || (t == OP_EXEC) || (t == OP_OK))
 	needprint = 0;
@@ -911,4 +964,33 @@ char *path;
 	exit(127);
   }
   return wait(&s) == pid && s == 0;
+}
+
+int strtoi(char *c) {
+        int result = 0, i;
+        for(i=0; i<strlen(c); i = i +1){
+                if (c[i] > 47 && c[i] < 58)
+                        result = result * 10 + ( c[i] - '0' );
+                else
+                        return  -1;
+        }
+        return result;
+}
+
+int hashCheck (char *dir, char *s) {
+    char *fullPath;
+    struct stat sc;
+    fullPath = malloc(strlen(dir) + strlen(s) + strlen(dirPath) + 1);
+
+    strcpy(fullPath, dir);
+    strcat(fullPath, "/");
+    strcat(fullPath, dirPath);
+    strcat(fullPath, s);
+
+    if (stat(fullPath, &sc) ==0) {
+        dir = fullPath;
+        printf("%s\n", fullPath);
+    }
+    free(fullPath);
+    return  0;
 }
