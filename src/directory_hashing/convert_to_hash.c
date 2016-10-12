@@ -20,60 +20,61 @@ uint32_t fnv(char *c) {
     return hash;
 }
 
-int main(int argc, char* argv[])
-{
-  
-  int dir1, dir2, i, filenameLength, len, res;
-  uint32_t hash;
-  char *c, *tmp, newChar, *filename, ch, buffer[3];
-  FILE *fp, *source;
-  struct stat sb, st;
-  struct dirent *cur;
-  DIR* pd;
-	pd = opendir(argv[1]);
-  
+int main(int argc, char *argv[]) {
+
+    int dir1, dir2, i, filenameLength, len, res;
+    uint32_t hash;
+    char newChar, *filename, buffer[3], *oldFilename;
+    FILE *fp, *source;
+    struct stat sb, st;
+    struct dirent *cur;
+    DIR *pd;
+    pd = opendir(argv[1]);
+
     while (cur = readdir(pd)) {
         if (*cur->d_name != '.') {
-					if (stat(cur->d_name, &sb) == 0 && !S_ISDIR(sb.st_mode)) {
-					  puts(cur->d_name);
 
-						c = calloc(1, sizeof(char));
-						tmp = calloc(1, sizeof(char));
-						filename = calloc(1, sizeof(char));
+            oldFilename = malloc(strlen(cur->d_name) + strlen(argv[1]) + 1);
+            strcpy(oldFilename, argv[1]);
+            strcat(oldFilename, cur->d_name);
+            stat(oldFilename, &sb);
 
-							c = cur->d_name;
-							hash = fnv(c);
-							dir1 = hash & 255;
-							hash = hash >> 8;
-							dir2 = hash & 255;
+            if (!S_ISDIR(sb.st_mode)) {
+                filename = calloc(1, sizeof(char));
+                hash = fnv(cur->d_name);
 
-							filename = realloc(filename, strlen(argv[1]) + 8 + strlen(c));
-							strcpy(filename, argv[1]);
-							sprintf(buffer, "%d", dir1);
-							strcat(filename, "/");						
-							strcat(filename, buffer);
+                dir1 = hash & 255;
+                hash = hash >> 8;
+                dir2 = hash & 255;
 
-							if (stat(filename, &st) == -1) {
-								mkdir(filename, 0777);
-							}
+                filename = realloc(filename, strlen(argv[1]) + 8 + strlen(cur->d_name));
+                strcpy(filename, argv[1]);
+                sprintf(buffer, "%d", dir1);
+                strcat(filename, buffer);
+                strcat(filename, "/");
 
-							strcat(filename, "/");
-							sprintf(buffer, "%d", dir2);
-							strcat(filename, buffer);
+                if (stat(filename, &st) == -1) {
+                    mkdir(filename, 0777);
+                }
 
-							if (stat(filename, &st) == -1) {
-								mkdir(filename, 0777);
-							}
+                sprintf(buffer, "%d", dir2);
+                strcat(filename, buffer);
+                strcat(filename, "/");
 
-							strcat(filename, "/");
-							strcat(filename, c);
+                if (stat(filename, &st) == -1) {
+                    mkdir(filename, 0777);
+                }
 
-							fp = fopen(filename, "ab+");
-							fclose(fp);
-    	   	}	
-			}
- 
-	}
-  	return(0);
+                strcat(filename, cur->d_name);
+
+                rename(oldFilename, filename);
+
+                free(filename);
+                free(oldFilename);
+            }
+        }
+
+    }
+    return (0);
 }
 
