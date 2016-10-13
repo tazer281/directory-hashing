@@ -37,7 +37,7 @@ int main(int argc, char *argv) {
     int dir1, dir2, i, j, filenameLength, len, res, writeAmount, k;
     unsigned int hash;
     char *c, *tmp, newChar, *filename, buffer[3], *dir;
-    FILE *fp;
+    FILE *fp, *files;
     struct stat st = {0};
 
     c = calloc(1, sizeof(char));
@@ -49,6 +49,8 @@ int main(int argc, char *argv) {
     j = 0;
     filenameLength = 0;
     dir = "singleTest";
+
+    files = fopen("filenames.txt", "ab+");
 
     if (stat(dir, &st) == -1) {
         mkdir(dir, 0777);
@@ -74,6 +76,7 @@ int main(int argc, char *argv) {
         strcpy(filename,dir);
         strcat(filename, "/");
         strcat(filename, c);
+        fprintf(files, "%s\n", filename);
 
         fp = fopen(filename, "ab+");
 
@@ -92,4 +95,5 @@ int main(int argc, char *argv) {
     free(c);
     free(tmp);
     free(filename);
+    fclose(files);
 }

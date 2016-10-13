@@ -812,6 +812,14 @@ int t;
 	checkarg(*++ipp);
 	p->n_info.n_str = *ipp;
     hashValue = fnv(p->n_info.n_str);
+    hashCopy = hashValue;
+    dir1 = hashValue & 255;
+    hashValue = hashValue >> 8;
+    dir2 = hashValue & 255;
+
+    sprintf(buffer, "%d/%d", dir1, dir2);
+    strcpy(dirPath, buffer);
+    strcat(dirPath, "/");
 	break;
     case OP_XDEV:	xdev_flag = 1;	break;
     case OP_DEPTH:	depth_flag = 1;	break;
@@ -821,14 +829,6 @@ int t;
     case OP_NOUSER:	case OP_NOGROUP:	break;
 	case HASH:
 		useHash = 1;
-        hashCopy = hashValue;
-        dir1 = hashValue & 255;
-        hashValue = hashValue >> 8;
-        dir2 = hashValue & 255;
-
-		sprintf(buffer, "%d/%d", dir1, dir2);
-        strcpy(dirPath, buffer);
-		strcat(dirPath, "/");
 		break;
 	default:
 		fatal("syntax error, operator expected", "");
